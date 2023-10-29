@@ -1,0 +1,608 @@
+Step-1:git clone https://github.com/devzakir/laravel9-boilerplate.git boilerplate
+Step-2: cd boilerplate
+Step-3:composer install or composer update
+Step-4: yarn install
+Step-5:cp .env.example .env
+Step-6:php artisan key:generate
+Step-7:database setting in .env and mysql
+Step-8:php artisan migrate:fresh --seed
+Step-9:php artisan serve and yarn dev
+Step-10:sob kicu thik thak thakle run hobe. login:developer@mail.com password
+
+
+Step-11:roles and permission use korar jonno spatie permission use korbo.
+>>>installing spatie:
+composer require spatie/laravel-permission
+php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider"
+php artisan optimize:clear
+php artisan migrate:fresh --seed
+
+Step-12: Spatie > Basic Usage > First, add the Spatie\Permission\Traits\HasRoles trait to your User model(s):
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Spatie\Permission\Traits\HasRoles;
+
+class User extends Authenticatable
+{
+    use HasRoles;
+
+    // ...
+}
+
+
+Step-13:Seeder proyojon porbe. tai age seeder ar kaj kore nibo.
+php artisan make:seeder RolePermissionSeeder
+RolePermissionSeeder>>>>>
+prothome akta role create korbo, arpor permission create korbo, 
+$role = Role::create(['name' => 'admin']);
+permission create korbo,
+        $permissions = [
+            ['name' => 'user list'],
+            ['name' => 'create user'],
+            ['name' => 'edit user'],
+            ['name' => 'delete user'],
+            ['name' => 'role list'],
+            ['name' => 'create role'],
+            ['name' => 'edit role'],
+            ['name' => 'delete role'],
+        ];
+permission gulake foreach ar maddome create kore nibo
+            foreach($permissions as $item){
+            	Permission::create($item);
+            }
+
+prothom user ke niye nibo, user
+        $user = User::first();
+prothom user ar modde role assign kore dibo,
+        $user->assignRole($role);
+akhon database seeder a jeye call kore dibo
+ $this->call([UserSeeder::class, RolePermissionSeeder::class]);
+
+php artisan migrate:fresh --seed
+
+role ke akhono kuno permission assign kora hoi ni.
+tai role ke permission assign kore nibo
+jehetu admin ar somosto permission thake tai admin ke sob permission diye dibo
+ $role = Role::create(['name' => 'admin']);
+
+        $permissions = [
+            ['name' => 'user list'],
+            ['name' => 'create user'],
+            ['name' => 'edit user'],
+            ['name' => 'delete user'],
+            ['name' => 'role list'],
+            ['name' => 'create role'],
+            ['name' => 'edit role'],
+            ['name' => 'delete role'],
+        ];
+        foreach($permissions as $item){
+            Permission::create($item);
+        }
+
+        $role->syncPermissions(Permission::all());
+
+        $user = User::first();
+        $user->assignRole($role);
+
+php artisan migrate:fresh --seed
+Seeder ar kaj ses 
+
+
+Step-14:RoleController>>>>
+role gulake index page a pathabo 
+    public function index()
+    {
+        $roles = Role::latest()->get();
+        return view('role.index', compact('roles'));
+    }
+role/index page a kaj korbo 
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            User Roles
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
+                <div class="flex justify-between items-center p-5 text-lg font-semibold text-left text-gray-900 bg-white dark:text-white dark:bg-gray-800">
+                    <h2 class="">All Roles
+                        <span class="bg-blue-500 text-white rounded px-1 text-xs py-0.5">10</span>
+                    </h2>
+                    @can('create role')
+                    <a href="{{ route('roles.create') }}">
+                        <button type="button"
+                            class="text-white bg-blue-500 hover:bg-blue-400 font-bold focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2">
+                            Create Role
+                        </button>
+                    </a>
+                    @endcan
+                </div>
+                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th scope="col" class="py-3 px-6">
+                                SL.
+                            </th>
+                            <th scope="col" class="py-3 px-6">
+                                Name
+                            </th>
+                            <th scope="col" class="py-3 px-6" style="width: 500px">
+                                Permissions
+                            </th>
+                            <th scope="col" class="py-3 px-6">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if($roles->count())
+                        @foreach($roles as $role)
+                        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                            <th scope="row" class="py-4 px-6">{{ $role->id }}</th>
+                            <th scope="row" class="py-4 px-6">
+                                {{ $role->name }}
+                            </th>
+                            <th class="py-4 px-6" style="width: 500px">
+                                <button id="showPerIcon{{ $role->id }}" onclick="permissionShow('show', {{ $role->id }})" type="button"
+                                    data-tooltip-target="show-button" data-bs-toggle="tooltip" data-bs-placement="top">
+                                    <x-svg.eye class="w-6 h-6 text-pink-400" />
+                                </button>
+                                <button class="hidden" id="hidePerIcon{{ $role->id }}" onclick="permissionShow('hide', {{ $role->id }})"
+                                    type="button" data-tooltip-target="hide-button" data-bs-toggle="tooltip"
+                                    data-bs-placement="top">
+                                    <x-svg.eye-off class="w-6 h-6 text-pink-400" />
+                                </button>
+                                <div id="permission{{ $role->id }}" class="hidden flex gap-4 flex-wrap text-center">
+                                    @foreach($role->permissions as $item)
+                                    <div class="bg-green-500 text-white px-2 py-1 rounded font-bold">
+                                        {{ $item->name }}
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </th>
+                            <td class="py-4 px-6 flex gap-2">
+                                @can('edit role')
+                                <a data-tooltip-target="edit-button" data-bs-toggle="tooltip" data-bs-placement="top"
+                                    href="{{ route('roles.edit', $role->id) }}">
+                                    <x-svg.edit class="w-6 h-6 text-green-400" />
+                                </a>
+                                @endcan
+                                @can('delete role')
+                                <form action="{{ route('roles.destroy', $role->id) }}" method="POST" class="d-inline">
+                                    @method("DELETE")
+                                    @csrf
+                                    <button data-tooltip-target="delete-button" data-bs-toggle="tooltip"
+                                        data-bs-placement="top">
+                                        <x-svg.trash class="w-6 h-6 text-red-400" />
+                                    </button>
+                                </form>
+                                @endcan
+                            </td>
+                        </tr>
+                        @endforeach
+                        @else
+                        <tr>
+                            <td colspan="10" class="text-center pt-8">Nothing Found.</td>
+                        </tr>
+                        @endif
+                    </tbody>
+                </table>
+                <div class="p-5">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+<script>
+    function permissionShow(param, id) {
+        if (param === 'show') {
+            $('#permission' + id).removeClass('hidden');
+            $('#showPerIcon' + id).addClass('hidden');
+            $('#hidePerIcon' + id).removeClass('hidden');
+        } else {
+            $('#permission' + id).addClass('hidden');
+            $('#showPerIcon' + id).removeClass('hidden');
+            $('#hidePerIcon' + id).addClass('hidden');
+        }
+    }
+</script>
+
+
+Step-15: Role delete niye kaj korbo
+    public function destroy(Role $role)
+    {
+       // abort_if(!userCan('role.delete'), 403);
+
+        $role->delete();
+        session()->flash('success', 'Role has been Deleted!');
+        return back();
+    }
+
+
+
+Step-16: role create niye kaj korbo
+    public function create()
+    {
+        $permissions = Permission::all();
+        return view('role.create', compact('permissions'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' =>'required|unique:roles,name'
+        ]);
+
+        $role = Role::create(['name' => $request->name, 'guard_name' => 'web']);
+        $role->syncPermissions($request->permissions);
+
+        session()->flash('success', 'Role Created!');
+        return redirect()->route('roles.index');
+    }
+
+
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            Role Create
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
+                <div class="flex justify-between items-center p-5 text-lg font-semibold text-left text-gray-900 bg-white dark:text-white dark:bg-gray-800">
+                    <h2>Role Create</h2>
+                    <a href="{{ route('roles.index') }}">
+                        <button type="button"
+                            class="text-white bg-blue-500 hover:bg-blue-400 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2">
+                            All Roles
+                        </button>
+                    </a>
+                </div>
+                <form action="{{ route('roles.store') }}" method="POST" class="p-4">
+                    @csrf
+                    <div class="mb-4">
+                        <label for="name" class="block mb-2 text-sm font-bold text-gray-900 dark:text-gray-300">Name</label>
+                        <input type="text" value="{{ old('name') }}" id="name" name="name" class="@error('name') border-red-500 @enderror pl-4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"  placeholder="Enter Role Name">
+                        @error('name')
+                            <div class="text-red-500 text-sm font-semibold">
+                                {{ $message }}
+                            </div>
+                        @enderror
+                    </div>
+                    <div class="flex gap-6 bg-white mb-6 px-6 py-4">
+                        @foreach($permissions as $permission)
+                        <div class="ml-3 role-management-checkbox">
+                            <input onclick="checksinglepermission('role-management-checkbox','management')" name="permissions[]" id="permission{{ $permission->id }}" value="{{ $permission->id }}" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                            <label for="permission{{ $permission->id }}" class="ml-2 text-lg text-gray-900 dark:text-gray-300">
+                                {{ $permission->name }} <br>
+                            </label>
+                        </div>
+                        @endforeach
+                    </div>
+
+                    {{-- <div class="flex flex-wrap gap-6 mb-4">
+                        <div class="lg:w-80 lg:mb-0 mb-2 px-6 py-4 rounded-md shadow-sm dark:bg-gray-800 bg-white">
+                            <div class="border-b pb-2">
+                                <input id="management" type="checkbox" onclick="CheckPermissionByGroup('role-management-checkbox',this)" value="2" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                <label for="management" class="ml-2 text-lg font-medium text-gray-900 dark:text-gray-300 select-none">
+                                    Select All
+                                </label>
+                            </div>
+                            <div class="focus:outline-none text-sm leading-normal pt-2 text-gray-500 dark:text-gray-200 ">
+                                <div class="ml-3 role-management-checkbox">
+                                    <input onclick="checksinglepermission('role-management-checkbox','management')" name="permissions[]" id="permission_checkbox" value="" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                    <label for="permission_checkbox" class="ml-2 text-lg text-gray-900 dark:text-gray-300">
+                                        Lorem Ipsum Dollar set <br>
+                                    </label>
+                                </div>
+                                <div class="ml-3 role-management-checkbox">
+                                    <input onclick="checksinglepermission('role-management-checkbox','management')" name="permissions[]" id="permission_checkbox2" value="" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                    <label for="permission_checkbox2" class="ml-2 text-lg text-gray-900 dark:text-gray-300">
+                                        Lorem Ipsum Dollar set <br>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="lg:w-80 px-6 py-4 rounded-md shadow-sm dark:bg-gray-800 bg-white">
+                            <div class="border-b pb-2">
+                                <input id="management" type="checkbox" onclick="CheckPermissionByGroup('role-management-checkbox',this)" value="2" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                <label for="management" class="ml-2 text-lg font-medium text-gray-900 dark:text-gray-300 select-none">
+                                    Select All
+                                </label>
+                            </div>
+                            <div class="focus:outline-none text-sm leading-normal pt-2 text-gray-500 dark:text-gray-200 ">
+                                <div class="ml-3 role-management-checkbox">
+                                    <input onclick="checksinglepermission('role-management-checkbox','management')"
+                                        name="permissions[]"
+                                        id="permission_checkbox"
+                                        value="" type="checkbox"
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                    <label for="permission_checkbox" class="ml-2 text-lg text-gray-900 dark:text-gray-300">
+                                        Lorem Ipsum Dollar set <br>
+                                    </label>
+                                </div>
+                                <div class="ml-3 role-management-checkbox">
+                                    <input onclick="checksinglepermission('role-management-checkbox','management')" name="permissions[]" id="permission_checkbox2" value="" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                    <label for="permission_checkbox2" class="ml-2 text-lg text-gray-900 dark:text-gray-300">
+                                        Lorem Ipsum Dollar set <br>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="lg:w-80 px-6 py-4 rounded-md shadow-sm dark:bg-gray-800 bg-white">
+                            <div class="border-b pb-2">
+                                <input id="management" type="checkbox" onclick="CheckPermissionByGroup('role-management-checkbox',this)" value="2" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                <label for="management" class="ml-2 text-lg font-medium text-gray-900 dark:text-gray-300 select-none">
+                                    Select All
+                                </label>
+                            </div>
+                            <div class="focus:outline-none text-sm leading-normal pt-2 text-gray-500 dark:text-gray-200 ">
+                                <div class="ml-3 role-management-checkbox">
+                                    <input onclick="checksinglepermission('role-management-checkbox','management')"
+                                        name="permissions[]"
+                                        id="permission_checkbox"
+                                        value="" type="checkbox"
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                    <label for="permission_checkbox" class="ml-2 text-lg text-gray-900 dark:text-gray-300">
+                                        Lorem Ipsum Dollar set <br>
+                                    </label>
+                                </div>
+                                <div class="ml-3 role-management-checkbox">
+                                    <input onclick="checksinglepermission('role-management-checkbox','management')" name="permissions[]" id="permission_checkbox2" value="" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                    <label for="permission_checkbox2" class="ml-2 text-lg text-gray-900 dark:text-gray-300">
+                                        Lorem Ipsum Dollar set <br>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div> --}}
+                    <button type="submit" class="mb-4 text-white bg-blue-500 hover:bg-blue-400 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-4">
+                        Create
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+<script>
+    $('#permission_all').on('click', function() {
+        if ($(this).is(':checked')) {
+            // check all the checkbox
+            $('input[type=checkbox]').prop('checked', true);
+        } else {
+            // uncheck all the checkbox
+            $('input[type=checkbox]').prop('checked', false);
+        }
+    });
+
+    // check permission by group
+    function CheckPermissionByGroup(classname, checkthis) {
+        const groupIdName = $("#" + checkthis.id);
+        const classCheckBox = $('.' + classname + ' input');
+        if (groupIdName.is(':checked')) {
+            // check all the checkbox
+            classCheckBox.prop('checked', true);
+        } else {
+            // uncheck all the checkbox
+            classCheckBox.prop('checked', false);
+        }
+        implementallcheck();
+    }
+
+    function checksinglepermission(groupClassname, groupId, countTotalPermission) {
+        const classCheckbox = $('.' + groupClassname + ' input');
+        const groupIDCheckBox = $('#' + groupId);
+
+        // if there is any occurance where somthing is not selected then make select check
+        if ($('.' + groupClassname + ' input:checked').length == countTotalPermission) {
+            groupIDCheckBox.prop('checked', true);
+        } else {
+            groupIDCheckBox.prop('checked', false);
+        }
+        implementallcheck();
+    }
+
+    function implementallcheck() {
+        const countPermisssions = 5;
+        const countPermisssionsGroup = 3;
+        var amount = countPermisssions + countPermisssionsGroup;
+
+        var checkbox = $("input:checked").length;
+
+        if (amount == checkbox) {
+            $('#permission_all').prop('checked', true);
+        } else {
+            $('#permission_all').prop('checked', false);
+        }
+    }
+</script>
+
+
+
+Step-17: Role Edit
+    public function edit($id)
+    {
+        $permissions = Permission::all();
+        $role = Role::with('permissions')->find($id);
+        $data = $role->permissions()->pluck('id')->toArray();
+        return view('role.edit', compact(['permissions', 'role', 'data']));
+    }
+
+
+
+    public function update(Request $request, Role $role)
+    {
+        //abort_if(!userCan('role.update'), 403);
+
+        $request->validate([
+            'name' =>"required|unique:roles,name, $role->id"
+        ]);
+
+        $role->update(['name' => $request->name]);
+        $role->syncPermissions($request->permissions);
+
+        session()->flash('success', 'Role has been updated!');
+        return back();
+    }
+
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            Role Edit
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
+                <div class="flex justify-between items-center p-5 text-lg font-semibold text-left text-gray-900 bg-white dark:text-white dark:bg-gray-800">
+                    <h2>Role Edit</h2>
+                    <a href="{{ route('roles.index') }}">
+                        <button type="button"
+                            class="text-white bg-blue-500 hover:bg-blue-400 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2">
+                            All Roles
+                        </button>
+                    </a>
+                </div>
+                <form action="{{ route('roles.update', $role->id) }}" method="POST" class="p-4">
+                    @csrf
+                    @method('PUT')
+                    <div class="mb-4">
+                        <label for="name" class="block mb-2 text-sm font-bold text-gray-900 dark:text-gray-300">Name</label>
+                        <input type="text" value="{{ old('name', $role->name) }}" id="name" name="name" class="@error('name') border-red-500 @enderror pl-4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"  placeholder="Enter Role Name">
+                        @error('name')
+                            <div class="text-red-500 text-sm font-semibold">
+                                {{ $message }}
+                            </div>
+                        @enderror
+                    </div>
+                    <div class="flex gap-6 bg-white mb-6 px-6 py-4">
+                        @foreach($permissions as $permission)
+                        <div class="ml-3 role-management-checkbox">
+                            <input onclick="checksinglepermission('role-management-checkbox','management')" name="permissions[]" id="permission{{ $permission->id }}" value="{{ $permission->id }}" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" @if(in_array($permission->id, $data)) checked @endif>
+                            <label for="permission{{ $permission->id }}" class="ml-2 text-lg text-gray-900 dark:text-gray-300">
+                                {{ $permission->name }} <br>
+                            </label>
+                        </div>
+                        @endforeach
+                    </div>
+                    <button type="submit" class="mb-4 text-white bg-blue-500 hover:bg-blue-400 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-4">
+                        Update Role
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+<script>
+    $('#permission_all').on('click', function() {
+        if ($(this).is(':checked')) {
+            // check all the checkbox
+            $('input[type=checkbox]').prop('checked', true);
+        } else {
+            // uncheck all the checkbox
+            $('input[type=checkbox]').prop('checked', false);
+        }
+    });
+
+    // check permission by group
+    function CheckPermissionByGroup(classname, checkthis) {
+        const groupIdName = $("#" + checkthis.id);
+        const classCheckBox = $('.' + classname + ' input');
+        if (groupIdName.is(':checked')) {
+            // check all the checkbox
+            classCheckBox.prop('checked', true);
+        } else {
+            // uncheck all the checkbox
+            classCheckBox.prop('checked', false);
+        }
+        implementallcheck();
+    }
+
+    function checksinglepermission(groupClassname, groupId, countTotalPermission) {
+        const classCheckbox = $('.' + groupClassname + ' input');
+        const groupIDCheckBox = $('#' + groupId);
+
+        // if there is any occurance where somthing is not selected then make select check
+        if ($('.' + groupClassname + ' input:checked').length == countTotalPermission) {
+            groupIDCheckBox.prop('checked', true);
+        } else {
+            groupIDCheckBox.prop('checked', false);
+        }
+        implementallcheck();
+    }
+
+    function implementallcheck() {
+        const countPermisssions = 5;
+        const countPermisssionsGroup = 3;
+        var amount = countPermisssions + countPermisssionsGroup;
+
+        var checkbox = $("input:checked").length;
+
+        if (amount == checkbox) {
+            $('#permission_all').prop('checked', true);
+        } else {
+            $('#permission_all').prop('checked', false);
+        }
+    }
+</script>
+
+
+
+Step-18: User And user assign role
+this project create with tailwind css
+
+Step-19:
+kernal.php te
+    protected $routeMiddleware = [
+        'auth' => \App\Http\Middleware\Authenticate::class,
+        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+        'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
+        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
+        'can' => \Illuminate\Auth\Middleware\Authorize::class,
+        'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
+        'signed' => \App\Http\Middleware\ValidateSignature::class,
+        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        'role' => \Spatie\Permission\Middlewares\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middlewares\PermissionMiddleware::class,
+        'role_or_permission' => \Spatie\Permission\Middlewares\RoleOrPermissionMiddleware::class,
+    ];
+Step-20:
+Step-21:
+Step-22:
+Step-23:
+Step-24:
+Step-25:
+Step-26:
+Step-27:
+Step-28:
+Step-29:
+Step-30:
+Step-31:
+Step-32:
+Step-33:
+Step-34:
+Step-35:
+Step-36:
+Step-37:
+Step-38:
+Step-39:
+Step-40:
+Step-41:
+Step-42:
+Step-43:
+Step-44:
+Step-45:
+Step-46:
+Step-47:
+Step-48:
+Step-49:
+
+
+
